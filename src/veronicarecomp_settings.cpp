@@ -11,8 +11,10 @@
 #include <format>
 #include <veronicarecomp_settings.h>
 
+REXCVAR_DEFINE_STRING(veronicarecomp_app_version, "", "VeronicaRecomp/Setup", "App Version").lifecycle(rex::cvar::Lifecycle::kInitOnly);
+
 namespace CodeVeronica {
-    void SetDefaultPaths(rex::PathConfig& paths) {
+    void VeronicaRecompSettings::SetDefaultPaths(rex::PathConfig& paths) {
         // Use default assets directory path if one isn't provided!
         const auto exe_dir = paths.config_path.parent_path();
         if (paths.game_data_root.empty()) {
@@ -25,23 +27,36 @@ namespace CodeVeronica {
         }
     }
 
-    void InitializeDefaultSettings(rex::ui::Window *curWindow) {
-        //Window settings
+    //Initializes CVars
+    void VeronicaRecompSettings::InitializeSettings(const rex::PathConfig& paths, rex::ui::Window *curWindow) {
+        //Initializes required settings, sets window's title.
         if( curWindow ){
-            curWindow->SetTitle(std::format("Resident Evil CODE:Veronica - v{}", _version ) ); //Updated Window title
+            curWindow->SetTitle(std::format("{} - v{}", _title, _version ) ); //Updated Window title
             if ( curWindow && !rex::cvar::HasNonDefaultValue("fullscreen") ){ //Setup fullscreen if it wasn't defined.
                 curWindow->SetFullscreen(true);
             }
         }
-        // Initialize default settings.
-        REXLOG_INFO("Initializing default settings...");
-        for (const auto& [k, v] : _defaultConfig) {
+        InitializeSettingsList("required", _requiredSettings);
+
+        //Initializes default vlaues and saves .toml when one isn't found, or if version number differs!
+        std::string cfgVersion = rex::cvar::GetFlagByName("veronicarecomp_app_version");
+        if(!std::filesystem::is_regular_file(paths.config_path) || cfgVersion.empty() || cfgVersion != _version ) { 
+            InitializeSettingsList("default", _defaultConfig);
+            rex::cvar::SetFlagByName("veronicarecomp_app_version", _version); //Set version
+            rex::cvar::SaveConfig(paths.config_path);
+        }
+    }
+
+    //Initializes CVars based on provided settings.
+    void VeronicaRecompSettings::InitializeSettingsList(std::string name, std::vector<ConfigSetting> settings){
+        REXLOG_INFO("Initializing {} settings...", name);
+        for (const auto& [k, v] : settings) {
             if ( !rex::cvar::HasNonDefaultValue(k) ){
                 bool bSuccess = rex::cvar::SetFlagByName(k, v);
                 if(bSuccess){
-                    REXLOG_INFO("[veronicarecomp_settings] {}: {}", k, v );
+                    REXLOG_INFO("[condemned2_settings] {}: {}", k, v );
                 }else{
-                    REXLOG_ERROR("[veronicarecomp_settings] Failing to set {}: {}", k, v );
+                    REXLOG_ERROR("[condemned2_settings] Failing to set {}: {}", k, v );
                 }
             }
         }

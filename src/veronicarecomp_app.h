@@ -12,8 +12,7 @@ namespace CodeVeronica {
     public:
       using rex::ReXApp::ReXApp;
 
-      static std::unique_ptr<rex::ui::WindowedApp> Create(
-          rex::ui::WindowedAppContext& ctx) {
+      static std::unique_ptr<rex::ui::WindowedApp> Create( rex::ui::WindowedAppContext& ctx) {
         return std::unique_ptr<VeronicarecompApp>(new VeronicarecompApp(ctx, "veronicarecomp", PPCImageConfig));
       }
 
@@ -21,12 +20,14 @@ namespace CodeVeronica {
         config.gpu_plugin = "xenos";
       }
 
-      void OnPostSetup() override{
-          InitializeDefaultSettings(window());
+      void OnConfigurePaths(rex::PathConfig& paths) override {
+        VeronicaRecompSettings::SetDefaultPaths(paths);
       }
 
-      void OnConfigurePaths(rex::PathConfig& paths) override {
-        SetDefaultPaths(paths);
+      std::optional<rex::PathConfig> OnFinalizePaths(const rex::PathConfig& defaults, std::function<void(rex::PathConfig)> resume) override {
+        VeronicaRecompSettings::InitializeSettings(defaults, window());
+        (void)resume;
+        return defaults;
       }
     };
 }
